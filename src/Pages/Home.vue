@@ -1,12 +1,12 @@
 <template>
   <div class="header" v-if="calendar">
-    <h3>{{ calendar[0].season }} Week {{ calendar[0].week }}</h3>
+    <h3>{{ currentWeek?.season }} Week {{ currentWeek?.week }}</h3>
   </div>
   <div v-else>Loading...</div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   Calendar,
@@ -21,6 +21,17 @@ const router = useRouter();
 const calendar = ref<Calendar[] | null>(null);
 const schedule = ref<Schedule[] | null>(null);
 
+const currentWeek = computed(() => {
+  if (!calendar.value) {
+    return null;
+  }
+  return calendar.value.find(
+    (c) =>
+      c.week === parseInt(route.query.week?.toString() || "1") &&
+      c.season === route.query.season
+  );
+});
+
 const fetchCalendarData = async (query: ScheduleQuery) => {
   const cal = await fetchCalendar(query.season);
 
@@ -29,6 +40,14 @@ const fetchCalendarData = async (query: ScheduleQuery) => {
 };
 
 const createScheduleQuery = (query: any): ScheduleQuery => {
+  if (!query) {
+    return {
+      season: new Date().getFullYear().toString(),
+      week: "1",
+      seasonType: "regular",
+      mediaType: "tv",
+    };
+  }
   const type = query.seasonType
     ? seasonTypeSchema.parse(query.seasonType.toString())
     : "regular";
