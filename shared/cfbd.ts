@@ -3,59 +3,18 @@ import fetch from "node-fetch";
 import { readFile, writeFile } from "fs/promises";
 import { existsSync as fileExists } from "fs";
 import path from "path";
-
-const scheduleSchema = z.object({
-  id: z.number(),
-  season: z.number(),
-  week: z.number(),
-  season_type: z.string(),
-  start_date: z.string(),
-  start_time_tbd: z.boolean(),
-  completed: z.boolean(),
-  home_id: z.number(),
-  home_team: z.string(),
-  home_points: z.number().nullable(),
-  away_id: z.number(),
-  away_team: z.string(),
-  away_points: z.number().nullable(),
-});
-
-const teamSchema = z.object({
-  id: z.number(),
-  school: z.string(),
-  mascot: z.string().nullable(),
-  abbreviation: z.string().nullable(),
-  conference: z.string().nullable(),
-  color: z.string().nullable(),
-  alt_color: z.string().nullable(),
-  logos: z.array(z.string()).nullable(),
-});
-
-const calendarSchema = z.object({
-  season: z.string(),
-  week: z.number(),
-  seasonType: z.string(),
-  firstGameStart: z.string(),
-  lastGameStart: z.string(),
-});
-
-const mediaSchema = z.object({
-  id: z.number(),
-  season: z.number(),
-  week: z.number(),
-  seasonType: z.string(),
-  startTime: z.string(),
-  isStartTimeTBD: z.boolean(),
-  homeTeam: z.string(),
-  homeConference: z.string(),
-  awayTeam: z.string(),
-  awayConference: z.string(),
-  mediaType: z.string(),
-  outlet: z.string(),
-});
-
-export const seasonTypeSchema = z.enum(["regular", "postseason"]);
-export const mediaTypeSchema = z.enum(["tv", "web", "radio", "ppv", "mobile"]);
+import {
+  Game,
+  gameSchema,
+  SeasonType,
+  calendarSchema,
+  Calendar,
+  mediaSchema,
+  Media,
+  MediaType,
+  Team,
+  teamSchema,
+} from "./schema";
 
 export interface FootballSuccessResult<T> {
   success: true;
@@ -67,13 +26,6 @@ export interface FootballFailedResult {
   statusCode: number;
   data: undefined | string;
 }
-
-export type Schedule = z.infer<typeof scheduleSchema>;
-export type Team = z.infer<typeof teamSchema>;
-export type Calendar = z.infer<typeof calendarSchema>;
-export type SeasonType = z.infer<typeof seasonTypeSchema>;
-export type MediaType = z.infer<typeof mediaTypeSchema>;
-export type Media = z.infer<typeof mediaSchema>;
 
 const fetchData = async <T>({
   key,
@@ -121,6 +73,8 @@ const fetchData = async <T>({
     };
   } catch (error) {
     return {
+      // make error not unknown
+
       success: false,
       statusCode: 500,
       data: JSON.stringify(error.toString()),
@@ -132,11 +86,11 @@ export const getGames = (
   year: string,
   week: string,
   seasonType: SeasonType
-): Promise<FootballFailedResult | FootballSuccessResult<Schedule[]>> => {
-  return fetchData<Schedule[]>({
+): Promise<FootballFailedResult | FootballSuccessResult<Game[]>> => {
+  return fetchData<Game[]>({
     url: `https://api.collegefootballdata.com/games?year=${year}&week=${week}&seasonType=${seasonType}`,
     key: `schedule-${year}-${week}-${seasonType}`,
-    schema: z.array(scheduleSchema),
+    schema: z.array(gameSchema),
   });
 };
 

@@ -1,14 +1,15 @@
 import { Handler } from "@netlify/functions";
 import {
-  Schedule,
+  Game,
   Team,
-  getMedia,
-  getGames,
-  getTeams,
   mediaTypeSchema,
   seasonTypeSchema,
   Media,
-} from "../../shared/cfbd";
+  Schedule,
+} from "../../../shared/schema";
+
+import { getMedia, getGames, getTeams } from "../../../shared/cfbd";
+import { getHeaders } from "../../../shared/utils";
 
 export const handler: Handler = async (event) => {
   const {
@@ -18,18 +19,20 @@ export const handler: Handler = async (event) => {
     mediaType = "tv",
   } = event.queryStringParameters || {};
   const year = season || new Date().getFullYear().toString();
+  const headers = getHeaders();
 
   const type = seasonTypeSchema.parse(seasonType);
-  const [scheduleResult, teamResult, mediaResult] = await Promise.all([
+  const [gameResult, teamResult, mediaResult] = await Promise.all([
     getGames(year, week, type),
     getTeams(),
     getMedia(year, week, type, mediaTypeSchema.parse(mediaType)),
   ]);
 
-  if (!scheduleResult.success) {
+  if (!gameResult.success) {
     return {
-      statusCode: scheduleResult.statusCode,
-      body: JSON.stringify(scheduleResult.data),
+      statusCode: gameResult.statusCode,
+      body: JSON.stringify(gameResult.data),
+      headers,
     };
   }
 
@@ -37,6 +40,7 @@ export const handler: Handler = async (event) => {
     return {
       statusCode: teamResult.statusCode,
       body: JSON.stringify(teamResult.data),
+      headers,
     };
   }
 
@@ -44,11 +48,12 @@ export const handler: Handler = async (event) => {
     return {
       statusCode: mediaResult.statusCode,
       body: JSON.stringify(mediaResult.data),
+      headers,
     };
   }
 
-  const schedule = getMappedSchedule(
-    scheduleResult.data,
+  const schedule = createSchedule(
+    gameResult.data,
     teamResult.data,
     mediaResult.data
   );
@@ -58,14 +63,15 @@ export const handler: Handler = async (event) => {
   return {
     statusCode: 200,
     body: body,
+    headers,
   };
 };
 
-const getMappedSchedule = (
-  schedule: Schedule[],
+const createSchedule = (
+  schedule: Game[],
   teams: Record<number, Team>,
   media: Record<number, Media>
-) => {
+): Schedule[] => {
   return schedule
     .map((game) => ({
       ...game,
