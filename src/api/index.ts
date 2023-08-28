@@ -10,8 +10,8 @@ export type ScheduleQuery = {
 };
 
 const fetchJson = (url: string) => {
-  return fetch(`${import.meta.env.VITE_APP_API_URL}${url}`).then((res) =>
-    res.json()
+  return fetch(`${import.meta.env.VITE_APP_API_URL || null}${url}`).then(
+    (res) => res.json()
   );
 };
 export const fetchCalendar = (season: string) => {
