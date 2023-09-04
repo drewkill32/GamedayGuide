@@ -1,11 +1,17 @@
 import { z } from "zod";
 
+const dateOrStringDate = () =>
+  z.preprocess(
+    (arg) => (typeof arg === "string" ? new Date(arg) : arg),
+    z.date()
+  );
+
 export const gameSchema = z.object({
   id: z.number(),
   season: z.number(),
   week: z.number(),
   season_type: z.string(),
-  start_date: z.date(),
+  start_date: dateOrStringDate(),
   start_time_tbd: z.boolean(),
   completed: z.boolean(),
   home_id: z.number(),
@@ -40,9 +46,9 @@ export const mediaSchema = z.object({
   season: z.number(),
   week: z.number(),
   seasonType: z.string(),
-  startTime: z.date(),
+  startTime: dateOrStringDate(),
   dow: z.number(),
-  dateOnly: z.date(),
+  dateOnly: dateOrStringDate(),
   day: z.enum([
     "Monday",
     "Tuesday",
@@ -72,9 +78,9 @@ export const scheduleSchema = z.object({
     "Saturday",
     "Sunday",
   ]),
-  date: z.date(),
-  firstGameStart: z.date(),
-  lastGameStart: z.date(),
+  date: dateOrStringDate(),
+  firstGameStart: dateOrStringDate(),
+  lastGameStart: dateOrStringDate(),
   outlets: z.array(
     z.object({
       name: z.string(),
@@ -85,7 +91,10 @@ export const scheduleSchema = z.object({
           season: z.number(),
           week: z.number(),
           seasonType: z.string(),
-          startTime: z.date(),
+          startTime: z.preprocess(
+            (arg) => (typeof arg === "string" ? new Date(arg) : arg),
+            z.date()
+          ),
           startTimeTbd: z.boolean(),
           completed: z.boolean(),
           homeTeam: teamSchema,

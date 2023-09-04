@@ -9,19 +9,11 @@ export const handler: Handler = async (event) => {
 
   const year = season || new Date().getFullYear().toString();
 
-  const calendarResult = await getCalendar(year);
-
-  if (!calendarResult.success) {
-    return {
-      statusCode: calendarResult.statusCode,
-      body: JSON.stringify(calendarResult.data),
-      headers,
-    };
-  }
+  const calendar = await getCalendar(year);
 
   return {
     statusCode: 200,
     headers,
-    body: JSON.stringify(calendarResult.data),
+    body: JSON.stringify(calendar),
   };
 };

@@ -22,40 +22,13 @@ export const handler: Handler = async (event) => {
   const headers = getHeaders();
 
   const type = seasonTypeSchema.parse(seasonType);
-  const [gameResult, teamResult, mediaResult] = await Promise.all([
+  const [games, teams, media] = await Promise.all([
     getGames(year, week, type),
     getTeams(),
     getMedia(year, week, type, mediaTypeSchema.parse(mediaType)),
   ]);
 
-  if (!gameResult.success) {
-    return {
-      statusCode: gameResult.statusCode,
-      body: JSON.stringify(gameResult.data),
-      headers,
-    };
-  }
-
-  if (!teamResult.success) {
-    return {
-      statusCode: teamResult.statusCode,
-      body: JSON.stringify(teamResult.data),
-      headers,
-    };
-  }
-
-  if (!mediaResult.success) {
-    return {
-      statusCode: mediaResult.statusCode,
-      body: JSON.stringify(mediaResult.data),
-      headers,
-    };
-  }
-  const schedule = createSchedule(
-    gameResult.data,
-    teamResult.data,
-    mediaResult.data
-  );
+  const schedule = createSchedule(games, teams, media);
 
   const body = JSON.stringify(schedule);
 
