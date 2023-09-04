@@ -51,7 +51,6 @@ export const handler: Handler = async (event) => {
       headers,
     };
   }
-
   const schedule = createSchedule(
     gameResult.data,
     teamResult.data,
@@ -68,16 +67,68 @@ export const handler: Handler = async (event) => {
 };
 
 const createSchedule = (
-  schedule: Game[],
-  teams: Record<number, Team>,
-  media: Record<number, Media>
+  games: Map<number, Game>,
+  teams: Map<number, Team>,
+  media: Media[]
 ): Schedule[] => {
-  return schedule
-    .map((game) => ({
-      ...game,
-      home_team: teams[game.home_id],
-      away_team: teams[game.away_id],
-      media: media[game.id] || null,
-    }))
-    .filter((game) => game.media !== null && game.start_time_tbd === false);
+  const schedule: Schedule[] = [];
+  let currentDate: Date = new Date("1/1/1970");
+  let currentOutlet: string | null = null;
+  let currentSchedule: Schedule | null = null;
+
+  media
+    .filter((m) => m.dateOnly.getMonth() === 8 && m.dateOnly.getDate() === 2)
+    .forEach((media) => {
+      const game = games.get(media.id)!;
+      const homeTeam = teams.get(game.home_id)!;
+      const awayTeam = teams.get(game.away_id)!;
+
+      if (media.dateOnly.getTime() !== currentDate.getTime()) {
+        currentSchedule = {
+          date: media.dateOnly,
+          dow: media.dow,
+          day: media.day,
+          firstGameStart: media.startTime,
+          lastGameStart: media.startTime,
+          outlets: [],
+        };
+        schedule.push(currentSchedule);
+        currentDate = media.dateOnly;
+        currentOutlet = null;
+      }
+
+      if (media.outlet !== currentOutlet) {
+        currentSchedule!.outlets.push({
+          name: media.outlet,
+          mediaType: media.mediaType,
+          games: [],
+        });
+        currentOutlet = media.outlet;
+      }
+
+      const currentOutletGames =
+        currentSchedule!.outlets[currentSchedule!.outlets.length - 1].games;
+      currentOutletGames.push({
+        id: game.id,
+        season: game.season,
+        awayPoints: game.away_points,
+        awayTeam: awayTeam,
+        completed: game.completed,
+        homePoints: game.home_points,
+        homeTeam: homeTeam,
+        seasonType: game.season_type,
+        startTime: game.start_date,
+        startTimeTbd: game.start_time_tbd,
+        week: game.week,
+      });
+
+      if (media.startTime < currentSchedule!.firstGameStart) {
+        currentSchedule!.firstGameStart = media.startTime;
+      }
+      if (media.startTime > currentSchedule!.lastGameStart) {
+        currentSchedule!.lastGameStart = media.startTime;
+      }
+    });
+
+  return schedule;
 };

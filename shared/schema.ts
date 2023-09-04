@@ -5,7 +5,7 @@ export const gameSchema = z.object({
   season: z.number(),
   week: z.number(),
   season_type: z.string(),
-  start_date: z.string(),
+  start_date: z.date(),
   start_time_tbd: z.boolean(),
   completed: z.boolean(),
   home_id: z.number(),
@@ -40,7 +40,18 @@ export const mediaSchema = z.object({
   season: z.number(),
   week: z.number(),
   seasonType: z.string(),
-  startTime: z.string(),
+  startTime: z.date(),
+  dow: z.number(),
+  dateOnly: z.date(),
+  day: z.enum([
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+  ]),
   isStartTimeTBD: z.boolean(),
   homeTeam: z.string(),
   homeConference: z.string(),
@@ -50,10 +61,41 @@ export const mediaSchema = z.object({
   outlet: z.string(),
 });
 
-export const scheduleSchema = gameSchema.extend({
-  home_team: teamSchema,
-  away_team: teamSchema,
-  media: mediaSchema,
+export const scheduleSchema = z.object({
+  dow: z.number(),
+  day: z.enum([
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+  ]),
+  date: z.date(),
+  firstGameStart: z.date(),
+  lastGameStart: z.date(),
+  outlets: z.array(
+    z.object({
+      name: z.string(),
+      mediaType: z.string(),
+      games: z.array(
+        z.object({
+          id: z.number(),
+          season: z.number(),
+          week: z.number(),
+          seasonType: z.string(),
+          startTime: z.date(),
+          startTimeTbd: z.boolean(),
+          completed: z.boolean(),
+          homeTeam: teamSchema,
+          awayTeam: teamSchema,
+          homePoints: z.number().nullable(),
+          awayPoints: z.number().nullable(),
+        })
+      ),
+    })
+  ),
 });
 
 export const seasonTypeSchema = z.enum(["regular", "postseason"]);

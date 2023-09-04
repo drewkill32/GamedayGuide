@@ -31,10 +31,12 @@ const fetchData = async <T>({
   key,
   url,
   schema,
+  mappingFunc,
 }: {
   key: string;
   url: string;
   schema: Schema<T>;
+  mappingFunc?: (data: unknown) => any;
 }): Promise<FootballFailedResult | FootballSuccessResult<T>> => {
   try {
     // if file exists, return it
@@ -62,7 +64,11 @@ const fetchData = async <T>({
         data: await response.text().catch(() => response.statusText),
       };
     }
-    const data = schema.parse(await response.json());
+    let jsonData: any = await response.json();
+    if (typeof mappingFunc === "function") {
+      jsonData = mappingFunc(jsonData);
+    }
+    const data = schema.parse(jsonData);
 
     if (process.env.NODE_ENV === "development") {
       await writeFile(path.join(__dirname, fileName), JSON.stringify(data));
@@ -74,7 +80,6 @@ const fetchData = async <T>({
   } catch (error) {
     return {
       // make error not unknown
-
       success: false,
       statusCode: 500,
       data: JSON.stringify(error.toString()),
@@ -82,16 +87,39 @@ const fetchData = async <T>({
   }
 };
 
-export const getGames = (
+export const getGames = async (
   year: string,
   week: string,
   seasonType: SeasonType
-): Promise<FootballFailedResult | FootballSuccessResult<Game[]>> => {
-  return fetchData<Game[]>({
+): Promise<FootballFailedResult | FootballSuccessResult<Map<number, Game>>> => {
+  const result = await fetchData<Game[]>({
     url: `https://api.collegefootballdata.com/games?year=${year}&week=${week}&seasonType=${seasonType}`,
     key: `schedule-${year}-${week}-${seasonType}`,
     schema: z.array(gameSchema),
+    mappingFunc: (data: any) => {
+      return data.map((game) => {
+        return {
+          ...game,
+          start_date: new Date(game.start_date),
+        };
+      });
+    },
   });
+
+  if (!result.success) {
+    return result;
+  }
+
+  //map off of the game id
+  const gameMap = new Map<number, Game>();
+  result.data.forEach((game) => {
+    gameMap.set(game.id, game);
+  });
+
+  return {
+    ...result,
+    data: gameMap,
+  };
 };
 
 export const getCalendar = (
@@ -109,32 +137,48 @@ export const getMedia = async (
   week: string,
   seasonType: SeasonType,
   mediaType: MediaType
-): Promise<
-  FootballFailedResult | FootballSuccessResult<Record<number, Media>>
-> => {
+): Promise<FootballFailedResult | FootballSuccessResult<Media[]>> => {
   const result = await fetchData<Media[]>({
     url: `https://api.collegefootballdata.com/games/media?year=${year}&week=${week}&seasonType=${seasonType}&mediaType=${mediaType}`,
     key: `media-${year}-${week}-${seasonType}-${mediaType}`,
     schema: z.array(mediaSchema),
+    mappingFunc: (data: any) => {
+      return data.map((media) => {
+        var startTime = new Date(media.startTime);
+        // if the startDate is less than 7 AM eastern time, it's the previous day
+
+        const startDate =
+          startTime.getHours() < 7
+            ? new Date(startTime.getTime() - 86400000)
+            : startTime;
+        return {
+          ...media,
+          startTime: startTime,
+          day: startDate.toLocaleDateString("en-US", { weekday: "long" }),
+          dow: startDate.getDay(),
+          dateOnly: new Date(
+            startDate.getFullYear(),
+            startDate.getMonth(),
+            startDate.getDate()
+          ),
+        };
+      });
+    },
   });
-
-  if (!result.success) {
-    return result;
+  if (result.success) {
+    //first sort the media by start time and outlet
+    result.data.sort((a, b) => {
+      if (a.dateOnly.getTime() !== b.dateOnly.getTime()) {
+        return a.dateOnly.getTime() - b.dateOnly.getTime();
+      }
+      return a.outlet.localeCompare(b.outlet);
+    });
   }
-
-  const mediaMap = result.data.reduce((acc, media) => {
-    acc[media.id] = media;
-    return acc;
-  }, {} as Record<number, Media>);
-
-  return {
-    ...result,
-    data: mediaMap,
-  };
+  return result;
 };
 
 export const getTeams = async (): Promise<
-  FootballFailedResult | FootballSuccessResult<Record<number, Team>>
+  FootballFailedResult | FootballSuccessResult<Map<number, Team>>
 > => {
   const result = await fetchData<Team[]>({
     url: `https://api.collegefootballdata.com/teams`,
@@ -146,13 +190,14 @@ export const getTeams = async (): Promise<
     return result;
   }
 
-  const teamMap = result.data.reduce((acc, team) => {
-    acc[team.id] = team;
-    return acc;
-  }, {} as Record<number, Team>);
+  //map off of the team id
+  const gameMap = new Map<number, Team>();
+  result.data.forEach((game) => {
+    gameMap.set(game.id, game);
+  });
 
   return {
     ...result,
-    data: teamMap,
+    data: gameMap,
   };
 };
