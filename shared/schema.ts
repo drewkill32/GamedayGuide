@@ -6,7 +6,7 @@ const dateOrStringDate = () =>
     z.date()
   );
 
-export const gameSchema = z.object({
+export const cfbdGameSchema = z.object({
   id: z.number(),
   season: z.number(),
   week: z.number(),
@@ -67,6 +67,20 @@ export const mediaSchema = z.object({
   outlet: z.string(),
 });
 
+export const gameSchema = z.object({
+  id: z.number(),
+  season: z.number(),
+  week: z.number(),
+  seasonType: z.string(),
+  startTime: dateOrStringDate(),
+  startTimeTbd: z.boolean(),
+  completed: z.boolean(),
+  homeTeam: teamSchema,
+  awayTeam: teamSchema,
+  homePoints: z.number().nullable(),
+  awayPoints: z.number().nullable(),
+});
+
 export const scheduleSchema = z.object({
   dow: z.number(),
   day: z.enum([
@@ -85,24 +99,7 @@ export const scheduleSchema = z.object({
     z.object({
       name: z.string(),
       mediaType: z.string(),
-      games: z.array(
-        z.object({
-          id: z.number(),
-          season: z.number(),
-          week: z.number(),
-          seasonType: z.string(),
-          startTime: z.preprocess(
-            (arg) => (typeof arg === "string" ? new Date(arg) : arg),
-            z.date()
-          ),
-          startTimeTbd: z.boolean(),
-          completed: z.boolean(),
-          homeTeam: teamSchema,
-          awayTeam: teamSchema,
-          homePoints: z.number().nullable(),
-          awayPoints: z.number().nullable(),
-        })
-      ),
+      games: z.array(gameSchema),
     })
   ),
 });
@@ -110,10 +107,11 @@ export const scheduleSchema = z.object({
 export const seasonTypeSchema = z.enum(["regular", "postseason"]);
 export const mediaTypeSchema = z.enum(["tv", "web", "radio", "ppv", "mobile"]);
 
-export type Game = z.infer<typeof gameSchema>;
+export type CfbDGame = z.infer<typeof cfbdGameSchema>;
 export type Team = z.infer<typeof teamSchema>;
 export type Calendar = z.infer<typeof calendarSchema>;
 export type SeasonType = z.infer<typeof seasonTypeSchema>;
 export type MediaType = z.infer<typeof mediaTypeSchema>;
 export type Media = z.infer<typeof mediaSchema>;
 export type Schedule = z.infer<typeof scheduleSchema>;
+export type Game = z.infer<typeof gameSchema>;

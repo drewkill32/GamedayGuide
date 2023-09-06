@@ -6,6 +6,7 @@ import {
   seasonTypeSchema,
   Media,
   Schedule,
+  CfbDGame,
 } from "../../../shared/schema";
 
 import { getMedia, getGames, getTeams } from "../../../shared/cfbd";
@@ -40,7 +41,7 @@ export const handler: Handler = async (event) => {
 };
 
 const createSchedule = (
-  games: Map<number, Game>,
+  games: Map<number, CfbDGame>,
   teams: Map<number, Team>,
   media: Media[]
 ): Schedule[] => {
@@ -49,59 +50,57 @@ const createSchedule = (
   let currentOutlet: string | null = null;
   let currentSchedule: Schedule | null = null;
 
-  media
-    .filter((m) => m.dateOnly.getMonth() === 8 && m.dateOnly.getDate() === 2)
-    .forEach((media) => {
-      const game = games.get(media.id)!;
-      const homeTeam = teams.get(game.home_id)!;
-      const awayTeam = teams.get(game.away_id)!;
+  media.forEach((media) => {
+    const game = games.get(media.id)!;
+    const homeTeam = teams.get(game.home_id)!;
+    const awayTeam = teams.get(game.away_id)!;
 
-      if (media.dateOnly.getTime() !== currentDate.getTime()) {
-        currentSchedule = {
-          date: media.dateOnly,
-          dow: media.dow,
-          day: media.day,
-          firstGameStart: media.startTime,
-          lastGameStart: media.startTime,
-          outlets: [],
-        };
-        schedule.push(currentSchedule);
-        currentDate = media.dateOnly;
-        currentOutlet = null;
-      }
+    if (media.dateOnly.getTime() !== currentDate.getTime()) {
+      currentSchedule = {
+        date: media.dateOnly,
+        dow: media.dow,
+        day: media.day,
+        firstGameStart: media.startTime,
+        lastGameStart: media.startTime,
+        outlets: [],
+      };
+      schedule.push(currentSchedule);
+      currentDate = media.dateOnly;
+      currentOutlet = null;
+    }
 
-      if (media.outlet !== currentOutlet) {
-        currentSchedule!.outlets.push({
-          name: media.outlet,
-          mediaType: media.mediaType,
-          games: [],
-        });
-        currentOutlet = media.outlet;
-      }
-
-      const currentOutletGames =
-        currentSchedule!.outlets[currentSchedule!.outlets.length - 1].games;
-      currentOutletGames.push({
-        id: game.id,
-        season: game.season,
-        awayPoints: game.away_points,
-        awayTeam: awayTeam,
-        completed: game.completed,
-        homePoints: game.home_points,
-        homeTeam: homeTeam,
-        seasonType: game.season_type,
-        startTime: game.start_date,
-        startTimeTbd: game.start_time_tbd,
-        week: game.week,
+    if (media.outlet !== currentOutlet) {
+      currentSchedule!.outlets.push({
+        name: media.outlet,
+        mediaType: media.mediaType,
+        games: [],
       });
+      currentOutlet = media.outlet;
+    }
 
-      if (media.startTime < currentSchedule!.firstGameStart) {
-        currentSchedule!.firstGameStart = media.startTime;
-      }
-      if (media.startTime > currentSchedule!.lastGameStart) {
-        currentSchedule!.lastGameStart = media.startTime;
-      }
+    const currentOutletGames =
+      currentSchedule!.outlets[currentSchedule!.outlets.length - 1].games;
+    currentOutletGames.push({
+      id: game.id,
+      season: game.season,
+      awayPoints: game.away_points,
+      awayTeam: awayTeam,
+      completed: game.completed,
+      homePoints: game.home_points,
+      homeTeam: homeTeam,
+      seasonType: game.season_type,
+      startTime: game.start_date,
+      startTimeTbd: game.start_time_tbd,
+      week: game.week,
     });
+
+    if (media.startTime < currentSchedule!.firstGameStart) {
+      currentSchedule!.firstGameStart = media.startTime;
+    }
+    if (media.startTime > currentSchedule!.lastGameStart) {
+      currentSchedule!.lastGameStart = media.startTime;
+    }
+  });
 
   return schedule;
 };

@@ -4,8 +4,8 @@ import { readFile, writeFile } from "fs/promises";
 import { existsSync as fileExists } from "fs";
 import path from "path";
 import {
-  Game,
-  gameSchema,
+  CfbDGame,
+  cfbdGameSchema,
   SeasonType,
   calendarSchema,
   Calendar,
@@ -76,22 +76,14 @@ export const getGames = async (
   year: string,
   week: string,
   seasonType: SeasonType
-): Promise<Map<number, Game>> => {
-  const result = await fetchData<Game[]>({
+): Promise<Map<number, CfbDGame>> => {
+  const result = await fetchData<CfbDGame[]>({
     url: `https://api.collegefootballdata.com/games?year=${year}&week=${week}&seasonType=${seasonType}`,
     key: `schedule-${year}-${week}-${seasonType}`,
-    schema: z.array(gameSchema),
-    mappingFunc: (data: any) => {
-      return data.map((game) => {
-        return {
-          ...game,
-          start_date: new Date(game.start_date),
-        };
-      });
-    },
+    schema: z.array(cfbdGameSchema),
   });
   //map off of the game id
-  const gameMap = new Map<number, Game>();
+  const gameMap = new Map<number, CfbDGame>();
   result.forEach((game) => {
     gameMap.set(game.id, game);
   });
@@ -144,7 +136,11 @@ export const getMedia = async (
     if (a.dateOnly.getTime() !== b.dateOnly.getTime()) {
       return a.dateOnly.getTime() - b.dateOnly.getTime();
     }
-    return a.outlet.localeCompare(b.outlet);
+    const byOutlet = a.outlet.localeCompare(b.outlet);
+    if (byOutlet !== 0) {
+      return byOutlet;
+    }
+    return a.startTime.getTime() - b.startTime.getTime();
   });
   return result;
 };

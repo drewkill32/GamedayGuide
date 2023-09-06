@@ -1,11 +1,13 @@
 <template>
   <div class="header" v-if="calendar">
     <h3>{{ currentWeek?.season }} Week {{ currentWeek?.week }}</h3>
+    <ScheduleLayout v-if="schedule" :schedule="schedule" />
   </div>
   <div v-else>Loading...</div>
 </template>
 
 <script setup lang="ts">
+import ScheduleLayout from "../components/ScheduleLayout.vue";
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
@@ -33,10 +35,17 @@ const currentWeek = computed(() => {
 });
 
 const fetchCalendarData = async (query: ScheduleQuery) => {
-  const cal = await fetchCalendar(query.season);
-
-  schedule.value = await fetchSchedule(query);
-  calendar.value = cal;
+  try {
+    const [cal, sch] = await Promise.all([
+      fetchCalendar(query.season),
+      fetchSchedule(query),
+    ]);
+    console.log({ cal, sch });
+    schedule.value = sch;
+    calendar.value = cal;
+  } catch (e) {
+    console.log(e);
+  }
 };
 
 const createScheduleQuery = (query: any): ScheduleQuery => {
@@ -63,7 +72,11 @@ const createScheduleQuery = (query: any): ScheduleQuery => {
 watch(
   () => route.query,
   async (q) => {
-    await fetchCalendarData(createScheduleQuery(q));
+    try {
+      await fetchCalendarData(createScheduleQuery(q));
+    } catch (e) {
+      console.log(e);
+    }
   }
 );
 
@@ -87,7 +100,7 @@ onMounted(() => {
 <style scoped>
 .header {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   font-size: 2rem;
