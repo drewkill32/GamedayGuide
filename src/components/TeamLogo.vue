@@ -3,7 +3,6 @@
     <img :src="logoUrl" />
 
     {{ team.abbreviation }}
-    <p>{{ time }}</p>
   </div>
 </template>
 

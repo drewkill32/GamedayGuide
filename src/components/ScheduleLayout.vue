@@ -15,59 +15,49 @@
         {{ h }}
       </div>
 
-      <template v-for="outlet in day.outlets" :key="outlet.name">
-        <div
-          class="outlet"
-          :style="`grid-row: ${
-            startingIndexMap[`${day.date.toLocaleDateString()}-${outlet.name}`]
-              .startIndex + 3
-          } / ${
-            startingIndexMap[`${day.date.toLocaleDateString()}-${outlet.name}`]
-              .endIndex + 3
-          } `"
-        >
-          {{ outlet.name }}
+      <div
+        class="outlet-wrapper"
+        v-for="outlet in day.outlets"
+        :key="outlet.name"
+      >
+        <div class="outlet">
+          <p>
+            {{ outlet.name }}
+          </p>
         </div>
-        <!-- <div
-          class="markers"
-          v-for="(h, index) in HOURS"
-          :key="h"
-          :style="`grid-column: ${
-            2 + index * cellsPerHour
-          } / span ${cellsPerHour} `"
-        ></div> -->
 
-        <div
-          class="game"
-          v-for="game in outlet.games"
-          :key="game.id"
-          :style="
-            getGridColumn(
-              game,
-              startingIndexMap[
-                `${day.date.toLocaleDateString()}-${outlet.name}`
-              ],
-              outlet.games
-            )
-          "
-        >
-          <TeamLogo
-            :team="game.awayTeam"
-            :time="getGameStartTime(game.startTime)"
-          />
-          @
-          <TeamLogo
-            :team="game.homeTeam"
-            :time="getGameEndTime(game.startTime)"
-          />
+        <div class="outlet-row">
+          <div
+            class="game"
+            v-for="game in outlet.games"
+            :key="game.id"
+            :style="
+              getGridColumn(
+                game,
+                startingIndexMap[
+                  `${day.date.toLocaleDateString()}-${outlet.name}`
+                ],
+                outlet.games
+              )
+            "
+          >
+            <TeamLogo
+              :team="game.awayTeam"
+              :time="getGameStartTime(game.startTime)"
+            />
+            @
+            <TeamLogo
+              :team="game.homeTeam"
+              :time="getGameEndTime(game.startTime)"
+            />
+          </div>
         </div>
-      </template>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { watch } from "fs";
 import { computed, onMounted } from "vue";
 import { Game, Schedule } from "../../shared/schema";
 import { HOURS } from "../utils";
@@ -123,12 +113,6 @@ const getOverlapCount = (games: Game[]) => {
       const range1EndTime = new Date(range1.startTime.getTime() + 210 * 60000);
       const range2EndTime = new Date(range2.startTime.getTime() + 210 * 60000);
 
-      if (
-        range1.awayTeam.abbreviation === "MONM" ||
-        range2.awayTeam.abbreviation === "MONM"
-      ) {
-        console.log(range1.awayTeam.abbreviation, range2.awayTeam.abbreviation);
-      }
       // Check for overlap
       if (range1EndTime > range2StartTime && range1StartTime < range2EndTime) {
         count++;
@@ -171,7 +155,7 @@ const getGridColumn = (
 
   const startColumn = getStartColumn(currentGameStart);
   return `grid-area: ${
-    indexes.startIndex + 3 + overlapCount
+    "auto" || indexes.startIndex + 3 + overlapCount
   }  / ${startColumn} / auto / ${
     startColumn + gameLengthHours * cellsPerHour
   };`;
@@ -195,12 +179,14 @@ const getStartColumn = (date: Date) => {
   padding-inline: 10px;
   overflow-x: auto;
   min-width: 900px;
+  box-sizing: border-box;
 }
 .day-grid {
   width: 100%;
   display: grid;
+  gap: 0.5;
   grid-template-columns: 150px repeat(v-bind(totalCells), 1fr);
-  grid-template-rows: 1fr;
+  grid-template-rows: repeat(auto-fit, minmax(0px, 1fr)) [row-end];
   text-align: center;
   font-size: 1rem;
 
@@ -217,36 +203,63 @@ const getStartColumn = (date: Date) => {
   }
   .outlet {
     grid-column: 1;
-    align-self: center;
     text-align: center;
-    margin-block: auto;
-    height: 100%;
-    padding-right: 0.25rem;
+
     border-right: 1px solid #333;
-    position: sticky;
-    left: 0;
+    border-top: 1px solid #333;
+    background-color: aqua;
+    width: 150px;
+    position: relative;
   }
 
+  .outlet p {
+    font-size: 1rem;
+    margin-top: 0.5rem;
+    position: sticky;
+    top: 0;
+    background-color: yellowgreen;
+  }
   .markers {
     background-color: red;
+    grid-row: 1 / 1;
+    grid-column: 1 / -1;
+    align-self: center;
+    text-align: center;
+    height: 100%;
+    z-index: 100;
+    border: 1px solid #333;
   }
 
   .game {
+    box-sizing: border-box;
     background-color: #eee;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-direction: row;
-    gap: 2rem;
+    gap: 0.8rem;
     padding-block: 0.5rem;
+    grid-row: 1 / 1;
+    grid-column: 1 / -1;
   }
 
   .title {
     background-color: #333;
     color: #fff;
   }
-  .outlet-name {
-    font-size: 0.5rem;
+
+  .outlet-row {
+    display: grid;
+    grid-template-columns: [total-start] repeat(v-bind(totalCells), 1fr) [total-end];
+    grid-template-rows: [total-start] repeat(150, minmax(0px, 1fr)) [total-end];
+    grid-template-rows: 1fr;
+    grid-column: 2 / -1;
+    grid-auto-rows: 1fr;
+  }
+  .outlet-wrapper {
+    grid-column: 1 / -1;
+    display: flex;
+    background-color: red;
   }
 }
 </style>
